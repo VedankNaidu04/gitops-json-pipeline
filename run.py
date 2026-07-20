@@ -3,26 +3,38 @@ import subprocess
 import sys
 
 
+PYTHON = sys.executable
+
+
 def execute(command, stage_name):
-    """Execute a pipeline stage."""
+    """
+    Execute a pipeline stage and terminate on failure.
+    """
 
     print("\n" + "=" * 50)
     print(f"RUNNING STAGE : {stage_name}")
     print("=" * 50)
 
-    result = subprocess.run(command)
+    try:
+        result = subprocess.run(
+            command,
+            check=True,
+            text=True
+        )
 
-    if result.returncode != 0:
+        print(f"\n[SUCCESS] {stage_name}")
+
+    except subprocess.CalledProcessError as e:
+
         print(f"\n[FAILED] {stage_name}")
-        sys.exit(result.returncode)
-
-    print(f"\n[SUCCESS] {stage_name}")
+        print(f"Exit Code : {e.returncode}")
+        sys.exit(e.returncode)
 
 
 def validate():
     execute(
         [
-            "python",
+            PYTHON,
             "scripts/validate.py",
             "--input",
             "input/sample.json",
@@ -34,10 +46,9 @@ def validate():
 
 
 def sanitize():
-
     execute(
         [
-            "python",
+            PYTHON,
             "scripts/sanitize.py",
             "--input",
             "artifacts/validated.json",
@@ -51,7 +62,7 @@ def sanitize():
 def transform():
     execute(
         [
-            "python",
+            PYTHON,
             "scripts/transform.py",
             "--input",
             "artifacts/result.template.json",
@@ -65,7 +76,7 @@ def transform():
 def verify():
     execute(
         [
-            "python",
+            PYTHON,
             "scripts/verify.py",
             "--input",
             "artifacts/transformed.json",
@@ -75,15 +86,25 @@ def verify():
 
 
 def pipeline():
+    """
+    Execute the complete GitOps JSON Pipeline.
+    """
+
     validate()
     sanitize()
     transform()
     verify()
 
+    print("\n" + "=" * 50)
+    print("PIPELINE EXECUTED SUCCESSFULLY")
+    print("=" * 50)
+
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description="GitOps JSON Pipeline")
+    parser = argparse.ArgumentParser(
+        description="GitOps JSON Processing Pipeline"
+    )
 
     parser.add_argument(
         "stage",
@@ -94,21 +115,17 @@ if __name__ == "__main__":
             "verify",
             "all",
         ],
+        help="Pipeline stage to execute",
     )
 
     args = parser.parse_args()
 
-    if args.stage == "validate":
-        validate()
+    stage_functions = {
+        "validate": validate,
+        "sanitize": sanitize,
+        "transform": transform,
+        "verify": verify,
+        "all": pipeline,
+    }
 
-    elif args.stage == "sanitize":
-        sanitize()
-
-    elif args.stage == "transform":
-        transform()
-
-    elif args.stage == "verify":
-        verify()
-
-    elif args.stage == "all":
-        pipeline()
+    stage_functions[args.stage]()

@@ -1,0 +1,51 @@
+name: GitOps JSON Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Run Validation
+        run: python run.py validate
+
+      - name: Run Sanitization
+        run: python run.py sanitize
+
+      - name: Run Transformation
+        run: python run.py transform
+
+      - name: Run Verification
+        run: python run.py verify
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-artifacts
+          path: artifacts/

@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual Environment
+.venv/
+venv/
+env/
+
+# VS Code
+.vscode/
+
+# Logs
+*.log
+
+# macOS / Windows
+.DS_Store
+Thumbs.db
+
+# Generated pipeline artifacts
+artifacts/*.json
+
+# Keep artifacts folder
+!artifacts/.gitkeep

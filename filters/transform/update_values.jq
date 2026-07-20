@@ -1,0 +1,1 @@
+.project.environment |= ascii_downcase
