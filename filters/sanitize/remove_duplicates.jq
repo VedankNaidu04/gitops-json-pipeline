@@ -1,0 +1,1 @@
+.components |= unique_by(.component_id)
