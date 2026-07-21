@@ -1,49 +1,136 @@
 import argparse
 import json
-import os
 import sys
+from pathlib import Path
 
+# ---------------------------------------------------------
+# Configuration
+# ---------------------------------------------------------
+
+CONFIG_FILE = Path("config/pipeline-config.json")
+
+
+def load_config():
+
+    if not CONFIG_FILE.exists():
+        print(f"[ERROR] Configuration file not found: {CONFIG_FILE}")
+        sys.exit(1)
+
+    try:
+        with CONFIG_FILE.open("r", encoding="utf-8") as file:
+            return json.load(file)
+
+    except json.JSONDecodeError as e:
+        print("[ERROR] Invalid configuration file.")
+        print(e)
+        sys.exit(1)
+
+
+CONFIG = load_config()
+
+TRANSFORM = CONFIG["stages"]["transform"]
+
+
+# ---------------------------------------------------------
+# Transformation
+# ---------------------------------------------------------
 
 def transform_json(input_file, output_file):
 
-    if not os.path.exists(input_file):
-        print(f"[ERROR] File not found: {input_file}")
+    input_path = Path(input_file)
+    output_path = Path(output_file)
+
+    if not input_path.exists():
+        print(f"[ERROR] File not found: {input_path}")
         sys.exit(1)
 
-    with open(input_file, "r", encoding="utf-8") as file:
+    with input_path.open("r", encoding="utf-8") as file:
         data = json.load(file)
 
-    # Sort components
-    if "components" in data:
-        data["components"] = sorted(
-            data["components"],
-            key=lambda x: x.get("component_id", "")
-        )
+    # -----------------------------------------------------
+    # Sort Components
+    # -----------------------------------------------------
 
-    # Sort servers
-    if "servers" in data:
-        data["servers"] = sorted(
-            data["servers"],
-            key=lambda x: x.get("hostname", "")
-        )
+    if TRANSFORM["sort"]["components"]:
 
-    # Generate summary
-    data["summary"] = {
-        "component_count": len(data.get("components", [])),
-        "server_count": len(data.get("servers", [])),
-        "environment": data.get("project", {}).get("environment", "unknown")
-    }
+        if "components" in data:
 
-    # Pipeline information
-    data["pipeline"] = {
-        "processed_by": "GitOps JSON Pipeline",
-        "stage": "transform",
-        "status": "SUCCESS"
-    }
+            data["components"] = sorted(
+                data["components"],
+                key=lambda component: component.get(
+                    "component_id",
+                    ""
+                )
+            )
 
-    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    # -----------------------------------------------------
+    # Sort Servers
+    # -----------------------------------------------------
 
-    with open(output_file, "w", encoding="utf-8") as file:
+    if TRANSFORM["sort"]["servers"]:
+
+        if "servers" in data:
+
+            data["servers"] = sorted(
+                data["servers"],
+                key=lambda server: server.get(
+                    "hostname",
+                    ""
+                )
+            )
+
+    # -----------------------------------------------------
+    # Summary
+    # -----------------------------------------------------
+
+    if TRANSFORM["summary"]["enabled"]:
+
+        data["summary"] = {
+
+            "component_count": len(
+                data.get("components", [])
+            ),
+
+            "server_count": len(
+                data.get("servers", [])
+            ),
+
+            "environment": data.get(
+                "project",
+                {}
+            ).get(
+                "environment",
+                "unknown"
+            )
+        }
+
+    # -----------------------------------------------------
+    # Pipeline Metadata
+    # -----------------------------------------------------
+
+    if TRANSFORM["pipeline_metadata"]["enabled"]:
+
+        data["pipeline"] = {
+
+            "processed_by": CONFIG["pipeline"]["name"],
+
+            "version": CONFIG["pipeline"]["version"],
+
+            "stage": "transform",
+
+            "status": "SUCCESS"
+        }
+
+    output_path.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    with output_path.open(
+        "w",
+        encoding="utf-8"
+    ) as file:
+
         json.dump(
             data,
             file,
@@ -53,17 +140,32 @@ def transform_json(input_file, output_file):
     print("\n===================================")
     print(" JSON TRANSFORMATION SUCCESSFUL")
     print("===================================")
-    print(f"Input File  : {input_file}")
-    print(f"Output File : {output_file}")
+    print(f"Input File  : {input_path}")
+    print(f"Output File : {output_path}")
     print("Status      : PASSED\n")
 
 
+# ---------------------------------------------------------
+# Main
+# ---------------------------------------------------------
+
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description="Transform JSON."
+    )
 
-    parser.add_argument("--input", required=True)
-    parser.add_argument("--output", required=True)
+    parser.add_argument(
+        "--input",
+        required=True,
+        help="Input JSON"
+    )
+
+    parser.add_argument(
+        "--output",
+        required=True,
+        help="Output JSON"
+    )
 
     args = parser.parse_args()
 
@@ -71,3 +173,4 @@ if __name__ == "__main__":
         args.input,
         args.output
     )
+    

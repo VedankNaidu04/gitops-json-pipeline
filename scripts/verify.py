@@ -1,59 +1,131 @@
 import argparse
 import json
-import os
 import re
 import sys
+from pathlib import Path
+
+# ---------------------------------------------------------
+# Configuration
+# ---------------------------------------------------------
+
+CONFIG_FILE = Path("config/pipeline-config.json")
 
 
-SEMVER_PATTERN = r"^\d+\.\d+\.\d+$"
+def load_config():
 
+    if not CONFIG_FILE.exists():
+        print(f"[ERROR] Configuration file not found: {CONFIG_FILE}")
+        sys.exit(1)
+
+    try:
+        with CONFIG_FILE.open("r", encoding="utf-8") as file:
+            return json.load(file)
+
+    except json.JSONDecodeError as e:
+        print("[ERROR] Invalid configuration file.")
+        print(e)
+        sys.exit(1)
+
+
+CONFIG = load_config()
+
+VERIFY_CONFIG = CONFIG["verification"]
+
+REQUIRED_KEYS = VERIFY_CONFIG["required_root_keys"]
+
+SEMVER_PATTERN = VERIFY_CONFIG["semantic_version_regex"]
+
+CHECKS = VERIFY_CONFIG["checks"]
+
+
+# ---------------------------------------------------------
+# Verification
+# ---------------------------------------------------------
 
 def verify_json(input_file):
 
-    if not os.path.exists(input_file):
-        print(f"[ERROR] File not found: {input_file}")
+    input_path = Path(input_file)
+
+    if not input_path.exists():
+        print(f"[ERROR] File not found: {input_path}")
         sys.exit(1)
 
-    with open(input_file, "r", encoding="utf-8") as file:
+    with input_path.open("r", encoding="utf-8") as file:
         data = json.load(file)
 
     errors = []
 
-    # Required root keys
-    for key in ["project", "components", "deployment"]:
-        if key not in data:
-            errors.append(f"Missing root key: {key}")
+    # -----------------------------------------------------
+    # Required Root Keys
+    # -----------------------------------------------------
 
-    # Duplicate component IDs
-    component_ids = []
+    if CHECKS["duplicate_components"] or CHECKS["deployment_stages"]:
 
-    for component in data.get("components", []):
-        cid = component.get("component_id")
+        for key in REQUIRED_KEYS:
 
-        if cid in component_ids:
-            errors.append(f"Duplicate component ID: {cid}")
+            if key not in data:
+                errors.append(f"Missing root key: {key}")
 
-        component_ids.append(cid)
+    # -----------------------------------------------------
+    # Duplicate Component IDs
+    # -----------------------------------------------------
 
-    # Version validation
-    for component in data.get("components", []):
+    if CHECKS["duplicate_components"]:
 
-        version = component.get("version")
+        component_ids = set()
 
-        if version:
+        for component in data.get("components", []):
 
-            if not re.match(SEMVER_PATTERN, version):
+            component_id = component.get("component_id")
+
+            if component_id in component_ids:
                 errors.append(
-                    f"Invalid version '{version}' in {component.get('component_id')}"
+                    f"Duplicate component ID: {component_id}"
                 )
 
-    # Deployment stages
-    if "deployment" in data:
+            component_ids.add(component_id)
 
-        stages = data["deployment"].get("stages", [])
+    # -----------------------------------------------------
+    # Semantic Version Validation
+    # -----------------------------------------------------
+
+    if CHECKS["semantic_versions"]:
+
+        for component in data.get("components", []):
+
+            version = component.get("version")
+
+            if version:
+
+                if not re.match(SEMVER_PATTERN, version):
+
+                    errors.append(
+                        f"Invalid version '{version}' "
+                        f"in component '{component.get('component_id')}'"
+                    )
+
+    # -----------------------------------------------------
+    # Deployment Stages
+    # -----------------------------------------------------
+
+    if CHECKS["deployment_stages"]:
+
+        stages = data.get(
+            "deployment",
+            {}
+        ).get(
+            "stages",
+            []
+        )
 
         if len(stages) == 0:
-            errors.append("Deployment stages are empty")
+            errors.append(
+                "Deployment stages are empty"
+            )
+
+    # -----------------------------------------------------
+    # Report
+    # -----------------------------------------------------
 
     print("\n===================================")
     print(" JSON VERIFICATION REPORT")
@@ -65,21 +137,38 @@ def verify_json(input_file):
             print(f"✗ {error}")
 
         print("\nStatus : FAILED\n")
+
         sys.exit(1)
 
     print("✓ Required keys exist")
-    print("✓ Component IDs unique")
-    print("✓ Versions valid")
-    print("✓ Deployment stages present")
+
+    if CHECKS["duplicate_components"]:
+        print("✓ Component IDs unique")
+
+    if CHECKS["semantic_versions"]:
+        print("✓ Versions valid")
+
+    if CHECKS["deployment_stages"]:
+        print("✓ Deployment stages present")
 
     print("\nStatus : PASSED\n")
 
 
+# ---------------------------------------------------------
+# Main
+# ---------------------------------------------------------
+
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description="Verify transformed JSON."
+    )
 
-    parser.add_argument("--input", required=True)
+    parser.add_argument(
+        "--input",
+        required=True,
+        help="Input JSON file"
+    )
 
     args = parser.parse_args()
 

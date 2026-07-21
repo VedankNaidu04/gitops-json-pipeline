@@ -1,18 +1,41 @@
 import argparse
+import json
 import subprocess
-import tempfile
-import shutil
-import os
 import sys
+import tempfile
+from pathlib import Path
+
+# ---------------------------------------------------------
+# Configuration
+# ---------------------------------------------------------
+
+CONFIG_FILE = Path("config/pipeline-config.json")
 
 
-FILTERS = [
-    "filters/sanitize/remove_nulls.jq",
-    "filters/sanitize/remove_metadata.jq",
-    "filters/sanitize/remove_duplicates.jq",
-    "filters/sanitize/remove_generic_names.jq",
-]
+def load_config():
 
+    if not CONFIG_FILE.exists():
+        print(f"[ERROR] Configuration file not found: {CONFIG_FILE}")
+        sys.exit(1)
+
+    try:
+        with open(CONFIG_FILE, "r", encoding="utf-8") as file:
+            return json.load(file)
+
+    except json.JSONDecodeError as e:
+        print("[ERROR] Invalid configuration file.")
+        print(e)
+        sys.exit(1)
+
+
+CONFIG = load_config()
+
+FILTERS = CONFIG["stages"]["sanitize"]["filters"]
+
+
+# ---------------------------------------------------------
+# Execute jq Filter
+# ---------------------------------------------------------
 
 def apply_filter(filter_file, input_file, output_file):
 
@@ -24,6 +47,7 @@ def apply_filter(filter_file, input_file, output_file):
     ]
 
     try:
+
         result = subprocess.run(
             command,
             capture_output=True,
@@ -31,21 +55,34 @@ def apply_filter(filter_file, input_file, output_file):
             check=True,
         )
 
-        with open(output_file, "w", encoding="utf-8") as file:
-            file.write(result.stdout)
+        Path(output_file).write_text(
+            result.stdout,
+            encoding="utf-8"
+        )
 
     except subprocess.CalledProcessError as e:
 
-        print(f"\n[ERROR] Failed while running {filter_file}")
+        print(f"\n[ERROR] Failed while running filter:")
+        print(filter_file)
         print(e.stderr)
+
         sys.exit(1)
 
 
+# ---------------------------------------------------------
+# Sanitize Pipeline
+# ---------------------------------------------------------
+
 def sanitize_json(input_file, output_file):
 
-    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    Path(output_file).parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
 
     current_file = input_file
+
+    temporary_files = []
 
     for jq_filter in FILTERS:
 
@@ -56,6 +93,8 @@ def sanitize_json(input_file, output_file):
 
         temp.close()
 
+        temporary_files.append(temp.name)
+
         apply_filter(
             jq_filter,
             current_file,
@@ -64,27 +103,55 @@ def sanitize_json(input_file, output_file):
 
         current_file = temp.name
 
-    shutil.copy(current_file, output_file)
+    Path(output_file).write_text(
+        Path(current_file).read_text(encoding="utf-8"),
+        encoding="utf-8"
+    )
+
+    # Cleanup temporary files
+    for temp_file in temporary_files:
+
+        try:
+            Path(temp_file).unlink(missing_ok=True)
+
+        except Exception:
+            pass
 
     print("\n===================================")
     print(" JSON SANITIZATION SUCCESSFUL")
     print("===================================")
     print(f"Input File  : {input_file}")
     print(f"Output File : {output_file}")
+
     print("\nApplied Filters:")
 
-    for f in FILTERS:
-        print(f"  ✓ {os.path.basename(f)}")
+    for jq_filter in FILTERS:
+        print(f"  ✓ {Path(jq_filter).name}")
 
     print("\nStatus      : PASSED\n")
 
 
+# ---------------------------------------------------------
+# Main
+# ---------------------------------------------------------
+
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description="Sanitize JSON using configurable jq filters."
+    )
 
-    parser.add_argument("--input", required=True)
-    parser.add_argument("--output", required=True)
+    parser.add_argument(
+        "--input",
+        required=True,
+        help="Input JSON"
+    )
+
+    parser.add_argument(
+        "--output",
+        required=True,
+        help="Output JSON"
+    )
 
     args = parser.parse_args()
 

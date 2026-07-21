@@ -1,0 +1,135 @@
+{
+    "pipeline": {
+        "name": "GitOps JSON Pipeline",
+        "version": "1.0.0",
+        "description": "GitOps-inspired JSON processing pipeline built using Python, jq, and GitHub Actions.",
+        "author": "Vedank Naidu",
+        "license": "MIT"
+    },
+
+    "input": {
+        "source": "input/sample.json"
+    },
+
+    "artifacts": {
+        "validated": "artifacts/validated.json",
+        "sanitized": "artifacts/result.template.json",
+        "transformed": "artifacts/transformed.json"
+    },
+
+    "stages": {
+        "validate": {
+            "enabled": true,
+            "description": "Validate JSON structure and required root keys."
+        },
+
+        "sanitize": {
+            "enabled": true,
+            "description": "Remove unwanted metadata, duplicate objects and generic fields.",
+            "filters": [
+                "filters/sanitize/remove_nulls.jq",
+                "filters/sanitize/remove_metadata.jq",
+                "filters/sanitize/remove_duplicates.jq",
+                "filters/sanitize/remove_generic_names.jq"
+            ]
+        },
+
+        "transform": {
+    "enabled": true,
+    "description": "Generate derived fields and normalize JSON.",
+
+    "sort": {
+        "components": true,
+        "servers": true
+    },
+
+    "summary": {
+        "enabled": true
+    },
+
+    "pipeline_metadata": {
+        "enabled": true
+    }
+},
+
+        "verify": {
+            "enabled": true,
+            "description": "Perform post-transformation integrity verification."
+        }
+    },
+
+    "validation": {
+        "required_root_keys": [
+            "project",
+            "components",
+            "deployment"
+        ]
+    },
+
+    "verification": {
+        "required_root_keys": [
+            "project",
+            "components",
+            "deployment"
+        ],
+
+        "semantic_version_regex": "^\\d+\\.\\d+\\.\\d+$",
+
+        "checks": {
+            "duplicate_components": true,
+            "deployment_stages": true,
+            "semantic_versions": true
+        }
+    },
+
+    "logging": {
+        "enabled": false,
+        "directory": "logs",
+        "filename": "pipeline.log",
+        "level": "INFO"
+    },
+
+    "reports": {
+        "enabled": false,
+        "directory": "reports",
+        "generate_summary": false,
+        "generate_html": false,
+        "generate_json": false
+    },
+
+    "github": {
+        "artifacts": {
+            "validated": "validated-json",
+            "sanitized": "sanitized-json",
+            "transformed": "transformed-json",
+            "pipeline": "pipeline-artifacts"
+        }
+    },
+
+    "aws": {
+        "enabled": false,
+        "region": "ap-south-1",
+
+        "s3": {
+            "enabled": false,
+            "bucket": "",
+            "artifact_prefix": "pipeline-artifacts/"
+        },
+
+        "ec2": {
+            "enabled": false,
+            "instance_type": "t2.micro",
+            "instance_id": ""
+        }
+    },
+
+    "future": {
+        "docker": false,
+        "json_schema_validation": false,
+        "yaml_support": false,
+        "xml_support": false,
+        "parallel_processing": false,
+        "multi_input_support": false,
+        "notification_support": false
+    }
+}

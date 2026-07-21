@@ -10,7 +10,9 @@ on:
       - main
 
 jobs:
-  pipeline:
+
+  validate:
+    name: 🟢 Validate JSON
     runs-on: ubuntu-latest
 
     steps:
@@ -22,29 +24,107 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install Python Dependencies
+      - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+
+      - name: Run Validation
+        run: python run.py validate
+
+      - name: Upload Validated JSON
+        uses: actions/upload-artifact@v4
+        with:
+          name: validated-json
+          path: artifacts/validated.json
+
+  sanitize:
+    name: 🟡 Sanitize JSON
+    needs: validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
       - name: Install jq
         run: |
           sudo apt-get update
           sudo apt-get install -y jq
 
-      - name: Run Validation
-        run: python run.py validate
+      - name: Download Validated JSON
+        uses: actions/download-artifact@v4
+        with:
+          name: validated-json
+          path: artifacts
 
       - name: Run Sanitization
         run: python run.py sanitize
 
+      - name: Upload Sanitized JSON
+        uses: actions/upload-artifact@v4
+        with:
+          name: sanitized-json
+          path: artifacts/result.template.json
+
+  transform:
+    name: 🔵 Transform JSON
+    needs: sanitize
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Download Sanitized JSON
+        uses: actions/download-artifact@v4
+        with:
+          name: sanitized-json
+          path: artifacts
+
       - name: Run Transformation
         run: python run.py transform
+
+      - name: Upload Transformed JSON
+        uses: actions/upload-artifact@v4
+        with:
+          name: transformed-json
+          path: artifacts/transformed.json
+
+  verify:
+    name: 🟣 Verify JSON
+    needs: transform
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Download Transformed JSON
+        uses: actions/download-artifact@v4
+        with:
+          name: transformed-json
+          path: artifacts
 
       - name: Run Verification
         run: python run.py verify
 
-      - name: Upload Artifacts
+      - name: Upload Final Artifact
         uses: actions/upload-artifact@v4
         with:
           name: pipeline-artifacts
