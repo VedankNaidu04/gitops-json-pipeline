@@ -1,66 +1,110 @@
-# 🚀 GitOps JSON Pipeline
-# run 2 
-> A modular Python-based GitOps JSON processing pipeline that validates, sanitizes, transforms, and verifies JSON configuration files using Python, jq, and GitHub Actions.
+# 🚀 GitOps-Inspired JSON Processing Pipeline
+
+> A modular CI pipeline that validates, sanitizes, transforms, verifies, and publishes JSON configuration artifacts using **Python**, **jq**, **GitHub Actions**, and **Amazon S3**.
 
 ![Python](https://img.shields.io/badge/Python-3.11-blue)
 ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-Passing-brightgreen)
+![AWS S3](https://img.shields.io/badge/AWS-S3-orange)
 ![jq](https://img.shields.io/badge/jq-1.8-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
 ---
 
-# 📌 Project Overview
+# 📌 Overview
 
-This project demonstrates a complete GitOps-style JSON processing pipeline built with Python and jq.
+This project demonstrates an automated **CI pipeline** for processing JSON configuration files.
 
-The pipeline automates:
+Every push to the repository automatically triggers a GitHub Actions workflow that:
 
-- ✅ JSON Validation
-- ✅ JSON Sanitization
-- ✅ JSON Transformation
-- ✅ JSON Verification
-- ✅ Artifact Generation
-- ✅ Continuous Integration using GitHub Actions
+- Validates JSON structure
+- Sanitizes configuration data using **jq**
+- Transforms the JSON
+- Verifies the generated output
+- Uploads the final artifact to **Amazon S3**
 
-The repository follows a modular project structure where every pipeline stage is independent and can be executed individually or as a complete pipeline.
+The project follows a modular architecture where every pipeline stage can be executed independently or as a complete end-to-end workflow.
 
 ---
 
-# 🏗️ Project Architecture
+# ✨ Features
 
+- ✅ Modular Python CLI
+- ✅ JSON Validation
+- ✅ jq-based Sanitization
+- ✅ JSON Transformation
+- ✅ Output Verification
+- ✅ Artifact Generation
+- ✅ GitHub Actions CI
+- ✅ Amazon S3 Integration
+- ✅ IAM Authentication
+- ✅ Automated Cloud Upload
+- ✅ Public Artifact Publishing
+
+---
+
+# 🏗 Architecture
+
+```text
+                    Developer
+                        │
+                    git push
+                        │
+                        ▼
+              GitHub Repository
+                        │
+                        ▼
+               GitHub Actions CI
+      ┌──────────────────────────────┐
+      │ Validate JSON                │
+      │ Sanitize JSON (jq)           │
+      │ Transform JSON               │
+      │ Verify Output                │
+      └──────────────────────────────┘
+                        │
+                        ▼
+             Upload Artifact to S3
+                        │
+                        ▼
+           Public JSON Configuration
 ```
-                input/sample.json
-                       │
-                       ▼
-              Validate (Python)
-                       │
-                       ▼
-             validated.json
-                       │
-                       ▼
-             Sanitize (jq Filters)
-                       │
-                       ▼
-          result.template.json
-                       │
-                       ▼
-           Transform (Python)
-                       │
-                       ▼
-            transformed.json
-                       │
-                       ▼
-             Verify (Python)
-                       │
-                       ▼
-            Pipeline Success
+
+---
+
+# ⚙ Pipeline Workflow
+
+```text
+input/sample.json
+        │
+        ▼
+Validate (Python)
+        │
+        ▼
+validated.json
+        │
+        ▼
+Sanitize (jq)
+        │
+        ▼
+result.template.json
+        │
+        ▼
+Transform (Python)
+        │
+        ▼
+transformed.json
+        │
+        ▼
+Verify (Python)
+        │
+        ▼
+Amazon S3
 ```
 
 ---
 
 # 📂 Project Structure
 
-```
+```text
 gitops-json-pipeline/
 │
 ├── .github/
@@ -74,14 +118,7 @@ gitops-json-pipeline/
 │
 ├── filters/
 │   ├── sanitize/
-│   │   ├── remove_nulls.jq
-│   │   ├── remove_duplicates.jq
-│   │   ├── remove_metadata.jq
-│   │   └── remove_generic_names.jq
-│   │
 │   └── transform/
-│       ├── add_fields.jq
-│       └── update_values.jq
 │
 ├── input/
 │   └── sample.json
@@ -99,27 +136,18 @@ gitops-json-pipeline/
 
 ---
 
-# ⚙️ Technologies Used
+# 🛠 Technologies
 
-- Python 3.11
-- jq
-- Git
-- GitHub Actions
-- JSON
-- PowerShell
-
----
-
-# ✨ Features
-
-- Modular pipeline architecture
-- Command-line execution
-- JSON schema validation
-- jq based sanitization
-- Automatic artifact generation
-- Pipeline orchestration
-- CI/CD using GitHub Actions
-- Easy to extend
+| Category | Technologies |
+|-----------|--------------|
+| Programming | Python 3.11 |
+| JSON Processing | jq |
+| CI | GitHub Actions |
+| Cloud | Amazon S3 |
+| Authentication | AWS IAM |
+| Version Control | Git |
+| Configuration | JSON |
+| Shell | PowerShell / Bash |
 
 ---
 
@@ -140,7 +168,7 @@ cd gitops-json-pipeline
 Create a virtual environment.
 
 ```bash
-py -m venv .venv
+python -m venv .venv
 ```
 
 Activate it.
@@ -151,7 +179,13 @@ Activate it.
 .\.venv\Scripts\Activate.ps1
 ```
 
-Install Python dependencies.
+### Linux / macOS
+
+```bash
+source .venv/bin/activate
+```
+
+Install dependencies.
 
 ```bash
 pip install -r requirements.txt
@@ -177,25 +211,17 @@ sudo apt install jq
 
 Run individual stages.
 
-Validate
-
 ```bash
 python run.py validate
 ```
-
-Sanitize
 
 ```bash
 python run.py sanitize
 ```
 
-Transform
-
 ```bash
 python run.py transform
 ```
-
-Verify
 
 ```bash
 python run.py verify
@@ -209,11 +235,46 @@ python run.py all
 
 ---
 
+# ☁ GitHub Actions Workflow
+
+The workflow automatically executes on every:
+
+- Push to `main`
+- Pull Request targeting `main`
+
+Pipeline stages:
+
+1. Checkout Repository
+2. Setup Python
+3. Install Dependencies
+4. Install jq
+5. Validate JSON
+6. Sanitize JSON
+7. Transform JSON
+8. Verify JSON
+9. Upload Workflow Artifacts
+10. Upload Final Artifact to Amazon S3
+
+---
+
+# ☁ Amazon S3 Integration
+
+After every successful workflow execution, the generated artifact is automatically uploaded to Amazon S3.
+
+Example:
+
+```text
+pipeline-artifacts/
+└── transformed.json
+```
+
+The uploaded JSON can be accessed through the generated S3 Object URL.
+
+---
+
 # 📦 Generated Artifacts
 
-The pipeline generates:
-
-```
+```text
 artifacts/
 │
 ├── validated.json
@@ -221,60 +282,11 @@ artifacts/
 └── transformed.json
 ```
 
-These files are automatically uploaded by GitHub Actions after every successful workflow execution.
-
 ---
 
-# 🤖 GitHub Actions
+# 📄 Sample Output
 
-The repository includes a CI workflow that automatically runs on:
-
-- Push to `main`
-- Pull Requests targeting `main`
-
-Workflow stages:
-
-- Checkout Repository
-- Setup Python
-- Install Dependencies
-- Install jq
-- Validate
-- Sanitize
-- Transform
-- Verify
-- Upload Artifacts
-
----
-
-# 📸 Screenshots
-
-Add the following screenshots here.
-
-- VS Code Project Structure
-- Successful Local Pipeline Run
-- GitHub Actions Workflow
-- Uploaded Artifacts
-
-Example:
-
-```
-images/
-├── workflow-success.png
-├── project-structure.png
-├── terminal-output.png
-```
-
-Then reference them:
-
-```markdown
-![Workflow](images/workflow-success.png)
-```
-
----
-
-# 🧪 Sample Output
-
-```
+```text
 RUNNING STAGE : Validate JSON
 ✓ Validation Successful
 
@@ -293,38 +305,89 @@ RUNNING STAGE : Verify JSON
 ✓ Versions valid
 ✓ Deployment stages present
 
-PIPELINE EXECUTED SUCCESSFULLY
+✓ Uploading Artifact to Amazon S3...
+
+✓ Pipeline Completed Successfully
 ```
 
 ---
 
-# 🎯 Learning Objectives
+# 📸 Screenshots
 
-This project demonstrates practical experience with:
+## Project Structure
 
-- Python scripting
-- CLI application development
-- JSON processing
-- jq filters
-- GitOps concepts
-- CI/CD pipelines
-- GitHub Actions
-- Repository organization
-- Automation
+```
+docs/images/project-structure.png
+```
 
 ---
 
-# 🚀 Future Improvements
+## GitHub Actions Workflow
 
-- JSON Schema validation
-- Docker support
-- Kubernetes deployment
-- Helm charts
-- Terraform integration
-- ArgoCD GitOps deployment
-- Unit tests
-- Logging
-- Configuration profiles
+```
+docs/images/github-actions-success.png
+```
+
+---
+
+## Amazon S3 Upload
+
+```
+docs/images/s3-upload.png
+```
+
+---
+
+## Public JSON Artifact
+
+```
+docs/images/public-json.png
+```
+
+---
+
+# 🎯 Skills Demonstrated
+
+- Python Automation
+- JSON Processing
+- jq Filters
+- CLI Development
+- Git
+- GitHub Actions
+- Continuous Integration (CI)
+- AWS IAM
+- Amazon S3
+- YAML Pipelines
+- Artifact Management
+- Cloud Automation
+
+---
+
+# 📈 Future Improvements
+
+- Docker Containerization
+- Kubernetes Deployment
+- ArgoCD Integration
+- Terraform Infrastructure
+- JSON Schema Validation
+- Unit & Integration Testing
+- Logging & Monitoring
+- Versioned S3 Artifacts
+- Automated Release Pipeline
+
+---
+
+# 📚 What I Learned
+
+Through this project I gained hands-on experience with:
+
+- Designing modular automation pipelines
+- Building reusable Python CLI tools
+- Writing jq filters for JSON manipulation
+- Creating CI workflows using GitHub Actions
+- Managing AWS IAM credentials securely with GitHub Secrets
+- Publishing build artifacts to Amazon S3
+- Structuring production-style repositories
 
 ---
 
@@ -332,9 +395,8 @@ This project demonstrates practical experience with:
 
 **Vedank Naidu**
 
-GitHub:
-
-https://github.com/VedankNaidu04
+- GitHub: https://github.com/VedankNaidu04
+- LinkedIn: *(Add your LinkedIn profile URL here)*
 
 ---
 
@@ -342,4 +404,8 @@ https://github.com/VedankNaidu04
 
 This project is licensed under the MIT License.
 
-See the LICENSE file for details.
+See the `LICENSE` file for details.
+
+---
+
+⭐ If you found this project interesting, consider giving it a star!
